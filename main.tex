@@ -1,0 +1,105 @@
+\documentclass[a4paper, 12pt]{article}
+\usepackage[a4paper]{geometry}
+
+\usepackage[T1,T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english,russian]{babel}
+\usepackage{libertine}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathrsfs}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{courier}
+
+\lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
+\lstset{framextopmargin=50pt,frame=leftline}
+
+% \renewcommand{\thesection}{}
+% \renewcommand{\thesubsection}{}
+% \renewcommand{\thesubsubsection}{}
+% \renewcommand{\theparagraph}{}
+
+\title{Алгоритмы поиска на не взвешенных графах на примере поиска путей в лабиринтах}
+\author{Виногродский Серафим}
+
+\begin{document}
+\begin{titlepage}
+    \maketitle
+    \tableofcontents
+    \thispagestyle{empty}
+\end{titlepage}
+
+\section{Введение}
+\ldots
+
+\section{Описание реализованных алгоритмов поиска}
+\subsection{Поиск в глубину (Depth-first search, DFS)}
+\subsubsection{Описание алгоритма}
+
+Поиск в глубину, как и поиск в ширину, является одним из базовых алгоритмов поиска на графах, в основе которого лежит использование стека для определения очерёдности посещения элементов графа. Для его реализации на C++ требуется 3 вспомогательные структуры:
+\begin{itemize}
+    \item[(1)] множество посещённых элементов графа;
+    \item[(2)] стек, определяющий очерёдность посещения;
+    \item[(3)] словарь родителей.
+\end{itemize}
+
+\begin{lstlisting}[language=C++]
+    auto visited = set<cell_t>({_start_pos});        // (1)
+    auto search_stack = stack<cell_t>({_start_pos}); // (2)
+    map<cell_t, cell_t> parents;                     // (3)
+\end{lstlisting}
+
+В общем случае структура \verb|parents| является необязательной, поскольку она используется только для восстановления пути до найденного элемента, что не всегда необходимо. Поскольку, в данной работе алгоритм DFS используется именно для поиска пути, а не для нахождения элемента, избавиться от структуры \verb|parents| невозможно.
+
+Далее, пока стек \verb|search_stack| не пуст, из него изымается верхний элемент \verb|next|. Если \verb|next| подходит под условия поиска, то из словаря родителей строится путь до найденного элемента, после чего этот путь возвращается как результат поиска:
+
+\begin{lstlisting}[language=C++]
+    while (!search_stack.empty()) {
+        cell_t next = search_stack.top();
+        if (next == _dest_pos) {
+            return build_path(parents, _start_pos, _dest_pos);
+        }
+        searh_stack.pop();
+
+        // <...>
+    }
+\end{lstlisting}
+
+В ином случае, то есть если искомая вершина ещё не достигнута, все до этого не посещённые дети вершины \verb|next| поочерёдно добавляются в стек \verb|search_stack|, после чего поиск продолжается уже для следующей вершины (если таковая имеется):
+
+\begin{lstlisting}[language=C++]
+    while (!search_stack.empty()) {
+        // <...>
+
+        for (cell_t child : neighbors(next)) {
+            if (!visited.contains(child)) {
+                parents.insert({child, next});
+                visited.insert(child);
+                search_stack.push(child);
+            }
+        }
+    }
+\end{lstlisting}
+
+Следствием использования стека для определения очерёдности посещения является то, что дети только что посещённых узлов обрабатываются раньше детей узлов, посещённых до этого. Таким образом алгоритм DFS как бы старается забраться как можно глубже в структуру дерева (что вполне соответствует названию алгоритма), вместо того, что бы последовательно обрабатывать все узлы все большей и большей глубины, как это делает алгоритм BSF, который будет описан далее.
+
+\subsubsection{Оценка сложности}
+\ldots
+
+\subsection{Поиск в ширину (Breadth-first search)}
+\ldots
+
+\subsection{Поиск в ширину с двух сторон}
+\ldots
+
+\section{Сравнение эффективности}
+\ldots
+
+\section{Выводы}
+\ldots
+
+\end{document}
