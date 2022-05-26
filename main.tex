@@ -48,9 +48,9 @@
 \end{itemize}
 
 \begin{lstlisting}[language=C++]
-    auto visited = set<cell_t>({_start_pos});        // (1)
+    auto visited      = set<cell_t>({_start_pos});   // (1)
     auto search_stack = stack<cell_t>({_start_pos}); // (2)
-    map<cell_t, cell_t> parents;                     // (3)
+    auto parents      = map<cell_t, cell_t>();       // (3)
 \end{lstlisting}
 
 В общем случае структура \verb|parents| является необязательной, поскольку она используется только для восстановления пути до найденного элемента, что не всегда необходимо. Поскольку, в данной работе алгоритм DFS используется именно для поиска пути, а не для нахождения элемента, избавиться от структуры \verb|parents| невозможно.
