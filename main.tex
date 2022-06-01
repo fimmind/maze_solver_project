@@ -39,7 +39,7 @@
 \section{Описание реализованных алгоритмов поиска}
 \subsection{Поиск в глубину (Depth-first search, DFS)}
 \subsubsection{Описание алгоритма}
-
+\label{ssub:DFS_algorithm}
 Поиск в глубину, как и поиск в ширину, является одним из базовых алгоритмов поиска на графах, в основе которого лежит использование стека для определения очерёдности посещения элементов графа. Для его реализации на C++ требуется 3 вспомогательные структуры:
 \begin{itemize}
     \item[(1)] множество посещённых элементов графа;
@@ -97,6 +97,7 @@
 
 \subsection{Поиск в ширину (Breadth-first search, BFS)}
 \subsubsection{Описание алгоритма}
+\label{ssub:BFS_algorithm}
 В общем случае, реализация алгоритма поиска в ширину полностью идентична таковому для поиска в глубину. Единственное отличие состоит в том, что для определения очерёдности посещения вместо стека используется очередь. Как следствие, алгоритм BSF гарантирует, что все  вершины заданной глубины будут посещены раньше всех вершин большей глубины, так что в процессе поиска алгоритм BFS, в отличие от DSF, как бы разрастается вширь, постепенно покрывая все большую и большую окрестность вершины, из которой начинается поиск (отсюда и название.)
 
 Фактическая реализация этого алгоритма в данном проекте, однако, в значительной степени отличается от алгоритма DFS. Вместо прямой реализации аналогичной той, что была приведения выше для DFS, алгоритм опирается на использование функции, реализующей обобщённый шаг поиска в ширину, используемый в дальнейшем алгоритмом поиска в ширину с двух сторон. Этот подход будет более подробно описан в части \ref{ssub:BFS_implementation}.
@@ -108,9 +109,95 @@
     \item потребление памяти --- \({ O(V) }\).
 \end{itemize}
 
-\subsection{Поиск в ширину с двух сторон}
+\subsection{Поиск в ширину с двух сторон (Bidirectional search)}
 \subsubsection{Описание алгоритма}
-\ldots
+Суть алгоритма поиска с двух сторон, как нетрудно следует из названия, состоит в том, что поиск пути начинается сразу с двух сторон --- и сточки начала, и с точки конца пути. Окончание поиска происходит в тот момент, когда два поиска пересекаются в некоторой вершине, через которую, соответственно, и будет проходить искомый путь.
+
+Реализация алгоритма двустороннего поиска в целом аналогична реализации алгоритмов DFS и BFS. Сначала  инициализируются используемые структуры --- отдельно для поиска в прямом направлении и отдельно для поиска в обратном направлении:
+
+\begin{lstlisting}[language=C++]
+    set<cell_t>         visited_forward({_start_pos});
+    queue<cell_t>       forward_search_queue({_start_pos});
+    map<cell_t, cell_t> parents;
+
+    set<cell_t>         visited_backward({_dest_pos});
+    queue<cell_t>       backward_search_queue({_dest_pos});
+    map<cell_t, cell_t> children;
+\end{lstlisting}
+
+Так же создаются две вспомогательные переменные:
+\begin{itemize}
+    \item[(1)] переменная-флаг, отвечающая за окончание поиска;
+    \item[(2)] переменная, куда будет сохранена вершина --- пересечение поисков.
+\end{itemize}
+\begin{lstlisting}[language=C++]
+    bool is_done = false; // (1)
+    cell_t intersection;  // (2)
+\end{lstlisting}
+
+Далее, пока и очередь прямого поиска, и очередь обратного поиска не пусты, выполняется по одному шагу поиска в каждом направлении:
+\begin{lstlisting}[language=C++]
+    while (!forward_search_queue.empty() &&
+           !backward_search_queue.empty()) {
+        bfs_step(
+            &visited_forward, &visited_backward,
+            &forward_search_queue, &parents,
+            &is_done, &intersection
+        );
+        bfs_step(
+            &visited_backward, &visited_forward,
+            &backward_search_queue, &children,
+            &is_done, &intersection
+        );
+
+        // <...>
+    }
+\end{lstlisting}
+
+В случае, если какой-то из поисков сигнализирует об завершении поиска, путём установки флагу \verb|is_done| значения \verb|true|, строятся и соединятся две части найденного пути, отвечающие каждому из направлений поиска:
+\begin{lstlisting}[language=C++]
+    while ( <...> ) {
+        // <...>
+
+        if (is_done) {
+            vector<cell_t> res_path =
+                build_path(parents, _start_pos, intersection);
+            res_path.pop_back();
+            res_path +=
+                build_reversed_path(
+                    children, _dest_pos, intersection
+                );
+            return res_path;
+        }
+    }
+\end{lstlisting}
+
+Если же очереди окажутся пустыми до окончания поиска, это будет означать, что пути межу двумя вершинами графа не существует, так что в качестве результата возвращается пустой путь:
+\begin{lstlisting}[language=C++]
+    return {};
+\end{lstlisting}
+
+Значительная часть логики алгоритма скрыта в функции \verb|bfs_step|, инкапсулирующей один шаг поиска в ширину (см. части~\ref{ssub:DFS_algorithm} и~\ref{ssub:BFS_algorithm}):
+\begin{lstlisting}[language=C++]
+    void bfs_step( <...> ) {
+        if (search_queue->empty() || *is_done) return;
+        cell_t next = search_queue->front();
+        if (visited_backward->contains(next)) {
+            *is_done = true;
+            if (intersection) *intersection = next;
+            return;
+        }
+        search_queue->pop();
+
+        for (cell_t child : neighbors(next)) {
+            if (!visited_forward->contains(child)) {
+                parents->insert({child, next});
+                visited_forward->insert(child);
+                search_queue->push(child);
+            }
+        }
+    }
+\end{lstlisting}
 
 \subsubsection{Оценка сложности}
 \ldots
